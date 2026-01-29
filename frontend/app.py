@@ -280,6 +280,79 @@ def call_chat_api(message: str, skill_context: str = ""):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+import re
+
+def format_lesson_content(text: str) -> str:
+    """
+    Format raw LLM output into clean, professional HTML.
+    - Converts **bold** to styled bold
+    - Converts `code` to styled code spans
+    - Cleans up extra whitespace
+    - Formats numbered lists properly
+    - Highlights important terms
+    """
+    if not text:
+        return ""
+    
+    # Remove excessive blank lines (more than 2 consecutive)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Remove leading/trailing whitespace from each line
+    lines = [line.strip() for line in text.split('\n')]
+    text = '\n'.join(lines)
+    
+    # Convert markdown bold **text** to styled HTML
+    text = re.sub(
+        r'\*\*([^*]+)\*\*',
+        r'<strong style="color: #F0F6FC; font-weight: 600;">\1</strong>',
+        text
+    )
+    
+    # Convert markdown code `code` to styled code spans
+    text = re.sub(
+        r'`([^`]+)`',
+        r'<code style="background: #21262D; color: #79C0FF; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">\1</code>',
+        text
+    )
+    
+    # Format numbered list items (1. 2. 3. etc.) - clean up spacing
+    text = re.sub(
+        r'^(\d+)\.\s*\n*\s*',
+        r'<div style="margin: 12px 0; padding-left: 8px; border-left: 2px solid #30363D;"><span style="color: #8B949E; font-weight: 600;">\1.</span> ',
+        text,
+        flags=re.MULTILINE
+    )
+    
+    # Close numbered items at double newlines or end
+    text = re.sub(r'(<div style="margin: 12px 0.*?">.*?)(\n\n|$)', r'\1</div>\2', text, flags=re.DOTALL)
+    
+    # Format bullet points
+    text = re.sub(
+        r'^[-•]\s*(.+)$',
+        r'<div style="margin: 8px 0; padding-left: 16px;">• \1</div>',
+        text,
+        flags=re.MULTILINE
+    )
+    
+    # Highlight key terms (words followed by colon at start of concept)
+    text = re.sub(
+        r'^([A-Z][a-zA-Z\s]+):',
+        r'<strong style="color: #A371F7;">\1:</strong>',
+        text,
+        flags=re.MULTILINE
+    )
+    
+    # Convert remaining newlines to proper spacing
+    text = text.replace('\n\n', '</p><p style="margin: 12px 0; color: #C9D1D9; line-height: 1.7;">')
+    text = text.replace('\n', ' ')
+    
+    # Wrap in paragraph if not already structured
+    if not text.startswith('<'):
+        text = f'<p style="margin: 12px 0; color: #C9D1D9; line-height: 1.7;">{text}</p>'
+    
+    return text
+
+
 # =============================================================================
 # SIDEBAR
 # =============================================================================
@@ -405,89 +478,89 @@ def render_planner_page():
     
     st.markdown("---")
     
-    # User Profile Form
-    st.markdown("### 👤 Your Profile")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        name = st.text_input(
-            "Full Name",
-            value=st.session_state.user_profile.get("name", ""),
-            placeholder="Enter your name"
+    # Wrap everything in a form to avoid "Press Enter to apply"
+    with st.form(key="planner_form", clear_on_submit=False):
+        # User Profile Form
+        st.markdown("### 👤 Your Profile")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            name = st.text_input(
+                "Full Name",
+                value=st.session_state.user_profile.get("name", ""),
+                placeholder="Enter your name"
+            )
+            
+            degree = st.text_input(
+                "Current Qualification",
+                value=st.session_state.user_profile.get("degree", ""),
+                placeholder="e.g., B.Tech in Computer Science"
+            )
+        
+        with col2:
+            role = st.selectbox(
+                "Professional Category",
+                options=["Student", "University Faculty", "Working Professional", "Researcher", "Career Changer"],
+                index=0
+            )
+            
+            knowledge_level = st.selectbox(
+                "Current Knowledge Level",
+                options=["Beginner (Just starting)", "Intermediate (Some experience)", "Advanced (Solid foundation)", "Expert (Deep expertise)"],
+                index=0
+            )
+        
+        st.markdown("---")
+        st.markdown("### 🎯 Learning Objective")
+        
+        goal = st.text_input(
+            "What skill or role do you want to master?",
+            value=st.session_state.user_profile.get("goal", ""),
+            placeholder="e.g., Master backend development with Python and cloud technologies"
         )
         
-        degree = st.text_input(
-            "Current Qualification",
-            value=st.session_state.user_profile.get("degree", ""),
-            placeholder="e.g., B.Tech in Computer Science"
-        )
-    
-    with col2:
-        role = st.selectbox(
-            "Professional Category",
-            options=["Student", "University Faculty", "Working Professional", "Researcher", "Career Changer"],
-            index=0
-        )
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        knowledge_level = st.selectbox(
-            "Current Knowledge Level",
-            options=["Beginner (Just starting)", "Intermediate (Some experience)", "Advanced (Solid foundation)", "Expert (Deep expertise)"],
-            index=0
-        )
+        # Form Submit Button (no need to press Enter for each field)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            generate_clicked = st.form_submit_button(
+                "✨ Generate My Learning Path",
+                use_container_width=True
+            )
     
-    st.markdown("---")
-    st.markdown("### 🎯 Learning Objective")
-    
-    goal = st.text_input(
-        "What skill or role do you want to master?",
-        value=st.session_state.user_profile.get("goal", ""),
-        placeholder="e.g., Master backend development with Python and cloud technologies"
-    )
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Submit Button
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        generate_clicked = st.button(
-            "✨ Generate My Learning Path",
-            use_container_width=True,
-            key="generate_btn"
-        )
-    
-    # Handle Form Submission
+    # Handle Form Submission (outside the form block)
     if generate_clicked:
         if not goal.strip():
             st.error("⚠️ Please enter a learning objective.")
-            return
-        
-        # Save profile to session
-        st.session_state.user_profile = {
-            "name": name,
-            "degree": degree,
-            "role": role,
-            "level": knowledge_level,
-            "goal": goal
-        }
-        
-        # Construct enriched prompt for backend
-        enriched_input = (
-            f"User Profile: {name}, {role}, {knowledge_level}, "
-            f"Background: {degree}. "
-            f"Learning Goal: {goal}"
-        )
-        
-        # Call API with progress indicator
-        with st.spinner("🔄 Orchestrating AI Agents... This may take up to 30 seconds."):
-            result = call_orchestrate_api(enriched_input)
-        
-        if result["success"]:
-            st.session_state.api_response = result["data"]
-            st.success("✅ Learning path generated successfully!")
         else:
-            st.error(f"❌ Error: {result['error']}")
-            st.session_state.api_response = None
+            # Save profile to session
+            st.session_state.user_profile = {
+                "name": name,
+                "degree": degree,
+                "role": role,
+                "level": knowledge_level,
+                "goal": goal
+            }
+            
+            # Construct enriched prompt for backend
+            enriched_input = (
+                f"User Profile: {name}, {role}, {knowledge_level}, "
+                f"Background: {degree}. "
+                f"Learning Goal: {goal}"
+            )
+            
+            # Call API with progress indicator
+            with st.spinner("🔄 Orchestrating AI Agents... This may take up to 30 seconds."):
+                result = call_orchestrate_api(enriched_input)
+            
+            if result["success"]:
+                st.session_state.api_response = result["data"]
+                st.success("✅ Learning path generated successfully!")
+            else:
+                st.error(f"❌ Error: {result['error']}")
+                st.session_state.api_response = None
     
     # Display Results if Available
     if st.session_state.api_response:
@@ -685,96 +758,192 @@ def render_about_page():
 # =============================================================================
 def render_learn_page():
     st.markdown("# 📚 Interactive Learning")
-    st.markdown("Select a skill to learn or chat with your AI tutor.")
     
-    st.markdown("---")
-    
-    # Check if user has generated a roadmap
+    # Get roadmap data
+    roadmap = {}
+    all_skills = []
     if st.session_state.api_response:
         learning_plan = st.session_state.api_response.get("learning_plan", {})
         roadmap = learning_plan.get("learning_path", {})
-        all_skills = []
         all_skills.extend(roadmap.get("foundation", []))
         all_skills.extend(roadmap.get("intermediate", []))
         all_skills.extend(roadmap.get("advanced", []))
+    
+    # Two-column layout: Main content (left) | Learning Path (right)
+    main_col, path_col = st.columns([7, 3])
+    
+    # ===== RIGHT COLUMN: Learning Path Reference =====
+    with path_col:
+        st.markdown("### 🗺️ Your Roadmap")
         
-        if all_skills:
-            st.markdown("### 🎯 Your Skills from Roadmap")
-            st.markdown("Click on any skill to start learning:")
-            
-            # Display skills as clickable buttons
-            cols = st.columns(4)
-            for idx, skill in enumerate(all_skills[:12]):  # Limit to 12 skills
-                with cols[idx % 4]:
-                    if st.button(skill, key=f"skill_{idx}", use_container_width=True):
-                        st.session_state.selected_skill = skill
-                        st.session_state.learning_content = None
-                        st.session_state.chat_messages = []
-            
-            st.markdown("---")
-    else:
-        st.info("💡 Generate a learning path first to see your personalized skills, or enter any topic below.")
-    
-    # Manual skill entry
-    st.markdown("### ✏️ Or Enter Any Topic")
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        manual_skill = st.text_input("Topic to learn", placeholder="e.g., REST APIs, Docker, Machine Learning")
-    with col2:
-        user_level = st.selectbox("Level", ["Beginner", "Intermediate", "Advanced"])
-    
-    if st.button("📖 Generate Lesson", use_container_width=False):
-        skill_to_learn = manual_skill if manual_skill else st.session_state.selected_skill
-        if skill_to_learn:
-            st.session_state.selected_skill = skill_to_learn
-            with st.spinner(f"Generating lesson for '{skill_to_learn}'..."):
-                result = call_learn_api(skill_to_learn, user_level)
-                if result["success"]:
-                    st.session_state.learning_content = result["data"]
-                else:
-                    st.error(f"Error: {result['error']}")
-        else:
-            st.warning("Please select or enter a skill first.")
-    
-    # Display Learning Content
-    if st.session_state.learning_content:
-        content_data = st.session_state.learning_content
-        if content_data.get("status") == "success":
-            st.markdown("---")
-            st.markdown(f"## 📖 Learning: {content_data.get('skill')}")
-            st.markdown(f"*Level: {content_data.get('level')}*")
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Display the content in a nice card
-            st.markdown(f"""
-            <div class="custom-card">
-                <div class="card-body" style="white-space: pre-wrap; line-height: 1.8;">
-                    {content_data.get('content', 'No content generated.')}
-                </div>
-            </div>
+        if roadmap and any([roadmap.get("foundation"), roadmap.get("intermediate"), roadmap.get("advanced")]):
+            # Foundation
+            st.markdown("""
+            <div style="background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58A6FF; padding: 12px; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
+                <div style="color: #58A6FF; font-weight: 600; margin-bottom: 8px;">🏗️ Foundation</div>
             """, unsafe_allow_html=True)
-        else:
-            st.error(content_data.get("message", "Failed to generate content."))
-    
-    st.markdown("---")
-    
-    # Chat with AI Tutor
-    st.markdown("### 💬 Ask Your AI Tutor")
-    st.markdown("Have questions? Chat with AURA for instant help.")
-    
-    # Chat input
-    chat_input = st.text_input(
-        "Your question",
-        placeholder="Ask anything about the topic...",
-        key="chat_input"
-    )
-    
-    if st.button("Send Message", key="send_chat"):
-        if chat_input.strip():
-            # Add user message
-            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
+            for skill in roadmap.get("foundation", [])[:5]:
+                selected = "→ " if skill == st.session_state.selected_skill else ""
+                color = "#58A6FF" if skill == st.session_state.selected_skill else "#8B949E"
+                st.markdown(f'<div style="color: {color}; font-size: 0.85rem; padding: 2px 0;">{selected}{skill}</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
             
-            # Get AI response
+            # Intermediate
+            st.markdown("""
+            <div style="background: rgba(163, 113, 247, 0.1); border-left: 3px solid #A371F7; padding: 12px; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
+                <div style="color: #A371F7; font-weight: 600; margin-bottom: 8px;">🚀 Growth</div>
+            """, unsafe_allow_html=True)
+            for skill in roadmap.get("intermediate", [])[:5]:
+                selected = "→ " if skill == st.session_state.selected_skill else ""
+                color = "#A371F7" if skill == st.session_state.selected_skill else "#8B949E"
+                st.markdown(f'<div style="color: {color}; font-size: 0.85rem; padding: 2px 0;">{selected}{skill}</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Advanced
+            st.markdown("""
+            <div style="background: rgba(63, 185, 80, 0.1); border-left: 3px solid #3FB950; padding: 12px; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
+                <div style="color: #3FB950; font-weight: 600; margin-bottom: 8px;">🏆 Mastery</div>
+            """, unsafe_allow_html=True)
+            for skill in roadmap.get("advanced", [])[:5]:
+                selected = "→ " if skill == st.session_state.selected_skill else ""
+                color = "#3FB950" if skill == st.session_state.selected_skill else "#8B949E"
+                st.markdown(f'<div style="color: {color}; font-size: 0.85rem; padding: 2px 0;">{selected}{skill}</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        else:
+            st.info("Generate a learning path first to see your roadmap here.")
+            if st.button("Go to Planner", key="goto_planner"):
+                st.session_state.current_page = "planner"
+                st.rerun()
+    
+    # ===== LEFT COLUMN: Main Learning Area =====
+    with main_col:
+        st.markdown("Select a skill from your roadmap or enter any topic to learn.")
+        st.markdown("---")
+        
+        # # Skill Selection Buttons
+        # if all_skills:
+        #     st.markdown("#### 🎯 Quick Select")
+        #     cols = st.columns(4)
+        #     for idx, skill in enumerate(all_skills[:8]):
+        #         with cols[idx % 4]:
+        #             btn_type = "primary" if skill == st.session_state.selected_skill else "secondary"
+        #             if st.button(skill, key=f"skill_{idx}", use_container_width=True):
+        #                 st.session_state.selected_skill = skill
+        #                 st.session_state.learning_content = None
+        #                 st.rerun()
+        
+        # Manual Entry
+        st.markdown("#### ✏️ Enter Topic")
+        input_col1, input_col2, input_col3 = st.columns([3, 1, 1])
+        with input_col1:
+            manual_skill = st.text_input("Topic", placeholder="e.g., REST APIs, Docker", label_visibility="collapsed")
+        with input_col2:
+            user_level = st.selectbox("Level", ["Beginner", "Intermediate", "Advanced"], label_visibility="collapsed")
+        with input_col3:
+            generate_clicked = st.button("📖 Learn", use_container_width=True)
+        
+        if generate_clicked:
+            skill_to_learn = manual_skill.strip() if manual_skill.strip() else st.session_state.selected_skill
+            if skill_to_learn:
+                st.session_state.selected_skill = skill_to_learn
+                with st.spinner(f"Generating lesson for '{skill_to_learn}'..."):
+                    result = call_learn_api(skill_to_learn, user_level)
+                    if result["success"]:
+                        st.session_state.learning_content = result["data"]
+                    else:
+                        st.error(f"Error: {result['error']}")
+            else:
+                st.warning("Please select or enter a skill first.")
+        
+        # ===== Display Structured Learning Content =====
+        if st.session_state.learning_content:
+            content_data = st.session_state.learning_content
+            if content_data.get("status") == "success":
+                st.markdown("---")
+                st.markdown(f"## 📖 {content_data.get('skill')}")
+                st.caption(f"Level: {content_data.get('level')}")
+                
+                raw_content = content_data.get('content', '')
+                
+                # Parse and display structured content
+                # The LLM returns sections like **Introduction**, **Key Concepts**, etc.
+                sections = {
+                    "Introduction": {"icon": "📌", "color": "#58A6FF"},
+                    "Key Concepts": {"icon": "🔑", "color": "#A371F7"},
+                    "Practical Example": {"icon": "💻", "color": "#3FB950"},
+                    "Common Mistakes": {"icon": "⚠️", "color": "#F85149"},
+                    "Next Steps": {"icon": "🚀", "color": "#F778BA"}
+                }
+                
+                # Try to split content by sections
+                current_section = None
+                section_content = {}
+                lines = raw_content.split('\n')
+                
+                for line in lines:
+                    # Check if line is a section header
+                    found_section = False
+                    for section_name in sections.keys():
+                        if section_name.lower() in line.lower() and ('**' in line or '#' in line or line.strip().startswith(str(list(sections.keys()).index(section_name) + 1))):
+                            current_section = section_name
+                            section_content[current_section] = []
+                            found_section = True
+                            break
+                    
+                    if not found_section and current_section:
+                        section_content[current_section].append(line)
+                
+                # Display each section in a styled card
+                if section_content:
+                    for section_name, config in sections.items():
+                        if section_name in section_content and section_content[section_name]:
+                            content_text = '\n'.join(section_content[section_name]).strip()
+                            if content_text:
+                                # Apply professional formatting
+                                formatted_content = format_lesson_content(content_text)
+                                st.markdown(f"""
+                                <div style="background: linear-gradient(135deg, rgba(22, 27, 34, 0.95) 0%, rgba(13, 17, 23, 0.95) 100%); border: 1px solid #30363D; border-left: 4px solid {config['color']}; border-radius: 8px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                                    <div style="color: {config['color']}; font-weight: 700; font-size: 1.1rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 1.3rem;">{config['icon']}</span> {section_name}
+                                    </div>
+                                    <div style="color: #C9D1D9; line-height: 1.8; font-size: 0.95rem;">
+                                        {formatted_content}
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                else:
+                    # Fallback: Display raw content with formatting
+                    formatted_raw = format_lesson_content(raw_content)
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, rgba(22, 27, 34, 0.95) 0%, rgba(13, 17, 23, 0.95) 100%); border: 1px solid #30363D; border-radius: 8px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <div style="color: #C9D1D9; line-height: 1.8; font-size: 0.95rem;">
+                            {formatted_raw}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+            else:
+                st.error(content_data.get("message", "Failed to generate content."))
+        
+        st.markdown("---")
+        
+        # ===== Chat with AI Tutor =====
+        st.markdown("### 💬 Ask Your AI Tutor")
+        
+        chat_col1, chat_col2 = st.columns([5, 1])
+        with chat_col1:
+            chat_input = st.text_input(
+                "Question",
+                placeholder="Ask anything about the topic...",
+                key="chat_input",
+                label_visibility="collapsed"
+            )
+        with chat_col2:
+            send_clicked = st.button("Send", key="send_chat", use_container_width=True)
+        
+        if send_clicked and chat_input.strip():
+            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
             skill_context = st.session_state.selected_skill or "General programming"
             with st.spinner("AURA is thinking..."):
                 result = call_chat_api(chat_input, skill_context)
@@ -784,29 +953,29 @@ def render_learn_page():
                 else:
                     st.session_state.chat_messages.append({"role": "assistant", "content": f"Error: {result['error']}"})
             st.rerun()
-    
-    # Display chat history
-    if st.session_state.chat_messages:
-        st.markdown("#### Conversation")
-        for msg in st.session_state.chat_messages:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div style="background: #1E3A5F; padding: 12px; border-radius: 8px; margin: 8px 0;">
-                    <strong style="color: #58A6FF;">You:</strong>
-                    <p style="color: #F0F6FC; margin: 4px 0 0 0;">{msg['content']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div style="background: #2D1B4E; padding: 12px; border-radius: 8px; margin: 8px 0;">
-                    <strong style="color: #A371F7;">AURA:</strong>
-                    <p style="color: #F0F6FC; margin: 4px 0 0 0; white-space: pre-wrap;">{msg['content']}</p>
-                </div>
-                """, unsafe_allow_html=True)
         
-        if st.button("Clear Chat", key="clear_chat"):
-            st.session_state.chat_messages = []
-            st.rerun()
+        # Display chat history
+        if st.session_state.chat_messages:
+            for msg in st.session_state.chat_messages:
+                if msg["role"] == "user":
+                    st.markdown(f"""
+                    <div style="background: #1E3A5F; padding: 12px; border-radius: 8px; margin: 8px 0;">
+                        <strong style="color: #58A6FF;">You:</strong>
+                        <p style="color: #F0F6FC; margin: 4px 0 0 0;">{msg['content']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background: #2D1B4E; padding: 12px; border-radius: 8px; margin: 8px 0;">
+                        <strong style="color: #A371F7;">AURA:</strong>
+                        <p style="color: #F0F6FC; margin: 4px 0 0 0; white-space: pre-wrap;">{msg['content']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            if st.button("Clear Chat", key="clear_chat"):
+                st.session_state.chat_messages = []
+                st.rerun()
+
 
 # =============================================================================
 # MAIN ROUTER

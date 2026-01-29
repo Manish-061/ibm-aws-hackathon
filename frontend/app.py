@@ -206,6 +206,12 @@ if "api_response" not in st.session_state:
     st.session_state.api_response = None
 if "backend_status" not in st.session_state:
     st.session_state.backend_status = "unknown"
+if "selected_skill" not in st.session_state:
+    st.session_state.selected_skill = None
+if "learning_content" not in st.session_state:
+    st.session_state.learning_content = None
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -244,6 +250,36 @@ def navigate_to(page: str):
     st.session_state.current_page = page
     st.rerun()
 
+def call_learn_api(skill: str, user_level: str = "Beginner"):
+    """Call the /learn endpoint to get educational content."""
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/learn",
+            params={"skill": skill, "user_level": user_level},
+            timeout=90
+        )
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def call_chat_api(message: str, skill_context: str = ""):
+    """Call the /chat endpoint for interactive tutoring."""
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/chat",
+            params={"message": message, "skill_context": skill_context},
+            timeout=60
+        )
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 # =============================================================================
 # SIDEBAR
 # =============================================================================
@@ -262,6 +298,9 @@ with st.sidebar:
     
     if st.button("🚀  Get Started", use_container_width=True, key="nav_planner"):
         navigate_to("planner")
+    
+    if st.button("📚  Learn", use_container_width=True, key="nav_learn"):
+        navigate_to("learn")
     
     if st.button("📖  About", use_container_width=True, key="nav_about"):
         navigate_to("about")
@@ -642,12 +681,142 @@ def render_about_page():
     st.info("🏆 Built for GenAI Hackathon 2026 • AWS Bedrock Category")
 
 # =============================================================================
+# PAGE: LEARN (Interactive Learning)
+# =============================================================================
+def render_learn_page():
+    st.markdown("# 📚 Interactive Learning")
+    st.markdown("Select a skill to learn or chat with your AI tutor.")
+    
+    st.markdown("---")
+    
+    # Check if user has generated a roadmap
+    if st.session_state.api_response:
+        learning_plan = st.session_state.api_response.get("learning_plan", {})
+        roadmap = learning_plan.get("learning_path", {})
+        all_skills = []
+        all_skills.extend(roadmap.get("foundation", []))
+        all_skills.extend(roadmap.get("intermediate", []))
+        all_skills.extend(roadmap.get("advanced", []))
+        
+        if all_skills:
+            st.markdown("### 🎯 Your Skills from Roadmap")
+            st.markdown("Click on any skill to start learning:")
+            
+            # Display skills as clickable buttons
+            cols = st.columns(4)
+            for idx, skill in enumerate(all_skills[:12]):  # Limit to 12 skills
+                with cols[idx % 4]:
+                    if st.button(skill, key=f"skill_{idx}", use_container_width=True):
+                        st.session_state.selected_skill = skill
+                        st.session_state.learning_content = None
+                        st.session_state.chat_messages = []
+            
+            st.markdown("---")
+    else:
+        st.info("💡 Generate a learning path first to see your personalized skills, or enter any topic below.")
+    
+    # Manual skill entry
+    st.markdown("### ✏️ Or Enter Any Topic")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        manual_skill = st.text_input("Topic to learn", placeholder="e.g., REST APIs, Docker, Machine Learning")
+    with col2:
+        user_level = st.selectbox("Level", ["Beginner", "Intermediate", "Advanced"])
+    
+    if st.button("📖 Generate Lesson", use_container_width=False):
+        skill_to_learn = manual_skill if manual_skill else st.session_state.selected_skill
+        if skill_to_learn:
+            st.session_state.selected_skill = skill_to_learn
+            with st.spinner(f"Generating lesson for '{skill_to_learn}'..."):
+                result = call_learn_api(skill_to_learn, user_level)
+                if result["success"]:
+                    st.session_state.learning_content = result["data"]
+                else:
+                    st.error(f"Error: {result['error']}")
+        else:
+            st.warning("Please select or enter a skill first.")
+    
+    # Display Learning Content
+    if st.session_state.learning_content:
+        content_data = st.session_state.learning_content
+        if content_data.get("status") == "success":
+            st.markdown("---")
+            st.markdown(f"## 📖 Learning: {content_data.get('skill')}")
+            st.markdown(f"*Level: {content_data.get('level')}*")
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Display the content in a nice card
+            st.markdown(f"""
+            <div class="custom-card">
+                <div class="card-body" style="white-space: pre-wrap; line-height: 1.8;">
+                    {content_data.get('content', 'No content generated.')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.error(content_data.get("message", "Failed to generate content."))
+    
+    st.markdown("---")
+    
+    # Chat with AI Tutor
+    st.markdown("### 💬 Ask Your AI Tutor")
+    st.markdown("Have questions? Chat with AURA for instant help.")
+    
+    # Chat input
+    chat_input = st.text_input(
+        "Your question",
+        placeholder="Ask anything about the topic...",
+        key="chat_input"
+    )
+    
+    if st.button("Send Message", key="send_chat"):
+        if chat_input.strip():
+            # Add user message
+            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
+            
+            # Get AI response
+            skill_context = st.session_state.selected_skill or "General programming"
+            with st.spinner("AURA is thinking..."):
+                result = call_chat_api(chat_input, skill_context)
+                if result["success"]:
+                    ai_response = result["data"].get("response", "I couldn't generate a response.")
+                    st.session_state.chat_messages.append({"role": "assistant", "content": ai_response})
+                else:
+                    st.session_state.chat_messages.append({"role": "assistant", "content": f"Error: {result['error']}"})
+            st.rerun()
+    
+    # Display chat history
+    if st.session_state.chat_messages:
+        st.markdown("#### Conversation")
+        for msg in st.session_state.chat_messages:
+            if msg["role"] == "user":
+                st.markdown(f"""
+                <div style="background: #1E3A5F; padding: 12px; border-radius: 8px; margin: 8px 0;">
+                    <strong style="color: #58A6FF;">You:</strong>
+                    <p style="color: #F0F6FC; margin: 4px 0 0 0;">{msg['content']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="background: #2D1B4E; padding: 12px; border-radius: 8px; margin: 8px 0;">
+                    <strong style="color: #A371F7;">AURA:</strong>
+                    <p style="color: #F0F6FC; margin: 4px 0 0 0; white-space: pre-wrap;">{msg['content']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        if st.button("Clear Chat", key="clear_chat"):
+            st.session_state.chat_messages = []
+            st.rerun()
+
+# =============================================================================
 # MAIN ROUTER
 # =============================================================================
 if st.session_state.current_page == "home":
     render_home_page()
 elif st.session_state.current_page == "planner":
     render_planner_page()
+elif st.session_state.current_page == "learn":
+    render_learn_page()
 elif st.session_state.current_page == "about":
     render_about_page()
 else:

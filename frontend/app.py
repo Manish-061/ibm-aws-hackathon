@@ -2,12 +2,8 @@ import streamlit as st
 import requests
 import re
 
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
 BACKEND_URL = "http://localhost:8000"
 
-# Page Config
 st.set_page_config(
     page_title="AURA-Learn | AI Career Architect",
     page_icon="🎓",
@@ -15,9 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =============================================================================
-# CUSTOM CSS STYLES (Professional Dark Theme)
-# =============================================================================
 st.markdown("""
 <style>
     /* Import Google Font */
@@ -190,9 +183,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =============================================================================
-# SESSION STATE INITIALIZATION
-# =============================================================================
 if "current_page" not in st.session_state:
     st.session_state.current_page = "home"
 if "user_profile" not in st.session_state:
@@ -214,9 +204,6 @@ if "refined_path" not in st.session_state:
 if "feedback_changes" not in st.session_state:
     st.session_state.feedback_changes = []
 
-# =============================================================================
-# HELPER FUNCTIONS (BACKEND LOGIC - UNTOUCHED)
-# =============================================================================
 def check_backend_health():
     try:
         response = requests.get(f"{BACKEND_URL}/health", timeout=5)
@@ -298,19 +285,56 @@ def format_lesson_content(text: str) -> str:
     """Formats raw LLM output into clean HTML for display."""
     if not text:
         return ""
+    
+    # Step 1: Handle fenced code blocks FIRST (```language ... ```)
+    def format_code_block(match):
+        lang = match.group(1) or "code"
+        code = match.group(2).strip()
+        code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        code = code.replace('\n', '<br>')
+        return f'''<div style="background: #0F172A; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0; overflow-x: auto;">
+            <div style="color: #64748B; font-size: 0.75rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">{lang}</div>
+            <pre style="margin: 0; color: #E2E8F0; font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">{code}</pre>
+        </div>'''
+    
+    text = re.sub(r'```(\w*)\n?(.*?)```', format_code_block, text, flags=re.DOTALL)
+    
+    # Step 2: Clean up excessive newlines
     text = re.sub(r'\n{3,}', '\n\n', text)
-    lines = [line.strip() for line in text.split('\n')]
-    text = '\n'.join(lines)
+    
+    # Step 3: Handle inline code `code`
+    text = re.sub(r'`([^`\n]+)`', r'<code style="background: #1E293B; color: #4CC9F0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; border: 1px solid #334155;">\1</code>', text)
+    
+    # Step 4: Bold text **text**
     text = re.sub(r'\*\*([^*]+)\*\*', r'<strong style="color: #F8FAFC; font-weight: 600;">\1</strong>', text)
-    text = re.sub(r'`([^`]+)`', r'<code style="background: #1E293B; color: #4CC9F0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; border: 1px solid #334155;">\1</code>', text)
-    text = re.sub(r'^(\d+)\.\s*\n*\s*', r'<div style="margin: 12px 0; padding-left: 8px; border-left: 2px solid #334155;"><span style="color: #4CC9F0; font-weight: 600;">\1.</span> ', text, flags=re.MULTILINE)
-    text = re.sub(r'(<div style="margin: 12px 0.*?">.*?)(\n\n|$)', r'\1</div>\2', text, flags=re.DOTALL)
-    text = re.sub(r'^[-•]\s*(.+)$', r'<div style="margin: 8px 0; padding-left: 16px;">• \1</div>', text, flags=re.MULTILINE)
+    
+    # Step 5: Numbered lists - match entire line and wrap properly
+    # Pattern: "1. content" or "1. content - more content"
+    def format_numbered_item(match):
+        num = match.group(1)
+        content = match.group(2).strip()
+        return f'<p style="margin: 10px 0; padding: 8px 12px; background: rgba(30, 41, 59, 0.3); border-radius: 6px; color: #CBD5E1;"><span style="color: #4CC9F0; font-weight: 700; margin-right: 8px;">{num}.</span>{content}</p>'
+    
+    text = re.sub(r'^(\d+)\.\s+(.+)$', format_numbered_item, text, flags=re.MULTILINE)
+    
+    # Step 6: Bullet points - match entire line
+    def format_bullet_item(match):
+        content = match.group(1).strip()
+        return f'<p style="margin: 6px 0; padding-left: 16px; color: #CBD5E1;">• {content}</p>'
+    
+    text = re.sub(r'^[-•]\s*(.+)$', format_bullet_item, text, flags=re.MULTILINE)
+    
+    # Step 7: Section headers (Capitalized words followed by colon)
     text = re.sub(r'^([A-Z][a-zA-Z\s]+):', r'<strong style="color: #4361EE;">\1:</strong>', text, flags=re.MULTILINE)
+    
+    # Step 8: Paragraph breaks
     text = text.replace('\n\n', '</p><p style="margin: 12px 0; color: #CBD5E1; line-height: 1.7;">')
     text = text.replace('\n', ' ')
+    
+    # Step 9: Wrap in paragraph if needed
     if not text.startswith('<'):
         text = f'<p style="margin: 12px 0; color: #CBD5E1; line-height: 1.7;">{text}</p>'
+    
     return text
 
 # =============================================================================
@@ -325,13 +349,13 @@ with st.sidebar:
     st.markdown("### Menu")
     
     # Navigation Buttons
-    if st.button("🏠  Dashboard", use_container_width=True, key="nav_home"):
+    if st.button("Home", use_container_width=True, key="nav_home"):
         navigate_to("home")
-    if st.button("🚀  Planner", use_container_width=True, key="nav_planner"):
+    if st.button("Planner", use_container_width=True, key="nav_planner"):
         navigate_to("planner")
-    if st.button("📚  Classroom", use_container_width=True, key="nav_learn"):
+    if st.button("Classroom", use_container_width=True, key="nav_learn"):
         navigate_to("learn")
-    if st.button("ℹ️  About System", use_container_width=True, key="nav_about"):
+    if st.button("About System", use_container_width=True, key="nav_about"):
         navigate_to("about")
     
     st.markdown("---")
@@ -434,14 +458,14 @@ def render_planner_page():
             st.markdown("### 👤 User Parameters")
             c1, c2 = st.columns(2)
             with c1:
-                name = st.text_input("Full Name", value=st.session_state.user_profile.get("name", ""), placeholder="e.g. Alex Chen")
+                name = st.text_input("Full Name", value=st.session_state.user_profile.get("name", ""), placeholder="e.g. Manish")
                 degree = st.text_input("Current Qualification", value=st.session_state.user_profile.get("degree", ""), placeholder="e.g. B.Tech Computer Science")
             with c2:
                 role = st.selectbox("Current Role", ["Student", "University Faculty", "Working Professional", "Researcher", "Career Changer"])
                 knowledge_level = st.selectbox("Proficiency Level", ["Beginner (Novice)", "Intermediate (Competent)", "Advanced (Proficient)", "Expert (Master)"])
             
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("### 🎯 Target Objective")
+            st.markdown("### Target Objective")
             goal = st.text_input("Primary Ambition", value=st.session_state.user_profile.get("goal", ""), placeholder="e.g. Master MLOps and deploy LLMs on AWS")
             
             st.markdown("<br>", unsafe_allow_html=True)
@@ -454,7 +478,7 @@ def render_planner_page():
 
     if generate_clicked:
         if not goal.strip():
-            st.error("⚠️  Objective required to proceed.")
+            st.error("Objective required to proceed.")
         else:
             st.session_state.user_profile = {"name": name, "degree": degree, "role": role, "level": knowledge_level, "goal": goal}
             enriched_input = f"User Profile: {name}, {role}, {knowledge_level}, Background: {degree}. Learning Goal: {goal}"
@@ -473,7 +497,7 @@ def render_planner_page():
 
 def render_results_section(data: dict):
     st.markdown("---")
-    st.markdown("## 📊 Your Architecture")
+    st.markdown("## 📊 Your Path to Success")
     
     learning_plan = data.get("learning_plan", {})
     if learning_plan.get("status") != "success":
@@ -496,7 +520,7 @@ def render_results_section(data: dict):
         content = "".join([f"<li>{s}</li>" for s in skills]) if skills else "<li>Analyzing prerequisites...</li>"
         st.markdown(f"""
         <div class="custom-card stage-foundation">
-            <div class="card-title">🏗️ Foundation</div>
+            <div class="card-title">Foundation</div>
             <div class="card-body"><ul style="padding-left:1rem;margin:0">{content}</ul></div>
         </div>
         """, unsafe_allow_html=True)
@@ -506,7 +530,7 @@ def render_results_section(data: dict):
         content = "".join([f"<li>{s}</li>" for s in skills]) if skills else "<li>Calculating trajectory...</li>"
         st.markdown(f"""
         <div class="custom-card stage-growth">
-            <div class="card-title">🚀 Growth</div>
+            <div class="card-title">Growth</div>
             <div class="card-body"><ul style="padding-left:1rem;margin:0">{content}</ul></div>
         </div>
         """, unsafe_allow_html=True)
@@ -516,7 +540,7 @@ def render_results_section(data: dict):
         content = "".join([f"<li>{s}</li>" for s in skills]) if skills else "<li>Defining mastery...</li>"
         st.markdown(f"""
         <div class="custom-card stage-mastery">
-            <div class="card-title">🏆 Mastery</div>
+            <div class="card-title">Mastery</div>
             <div class="card-body"><ul style="padding-left:1rem;margin:0">{content}</ul></div>
         </div>
         """, unsafe_allow_html=True)
@@ -530,7 +554,7 @@ def render_results_section(data: dict):
             with [d1, d2, d3][idx]:
                 st.markdown(f"""
                 <div class="custom-card">
-                    <div class="card-title">🔗 {domain.capitalize()}</div>
+                    <div class="card-title">{domain.capitalize()}</div>
                     <div class="card-body">{impact}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -548,7 +572,7 @@ def render_results_section(data: dict):
 
     # Feedback Refinement Loop
     st.markdown("---")
-    st.markdown("### 🔄 Optimization Loop")
+    st.markdown("### Optimize Learning Path")
     st.info("💡 Rate skills to help the agents recalibrate your learning path.")
     
     all_skills = []
@@ -616,7 +640,7 @@ def render_results_section(data: dict):
 # PAGE: LEARN
 # =============================================================================
 def render_learn_page():
-    st.markdown("# 📚 Interactive Knowledge Base")
+    st.markdown("# 📚 Interactive Learning")
     
     roadmap = {}
     if st.session_state.api_response:
@@ -625,7 +649,7 @@ def render_learn_page():
     main_col, path_col = st.columns([7, 3])
     
     with path_col:
-        st.markdown("### 🗺️ Context")
+        st.markdown("### 🗺️ You can start with-")
         if roadmap:
             for stage, color, icon in [("foundation", "#4CC9F0", "🏗️"), ("intermediate", "#4361EE", "🚀"), ("advanced", "#7209B7", "🏆")]:
                 skills = roadmap.get(stage, [])
@@ -634,7 +658,7 @@ def render_learn_page():
                     <div style="background: rgba(15, 23, 42, 0.5); border-left: 3px solid {color}; padding: 10px; margin-bottom: 8px; border-radius: 0 8px 8px 0;">
                         <div style="color: {color}; font-weight: 700; font-size: 0.85rem; margin-bottom: 5px;">{icon} {stage.capitalize()}</div>
                     """, unsafe_allow_html=True)
-                    for skill in skills[:5]:
+                    for skill in skills[:10]:
                         marker = "➤ " if skill == st.session_state.selected_skill else ""
                         st.markdown(f'<div style="color: #94A3B8; font-size: 0.8rem; padding: 1px 0;">{marker}{skill}</div>', unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
@@ -642,7 +666,7 @@ def render_learn_page():
             st.info("No roadmap found. Go to Planner.")
 
     with main_col:
-        st.markdown("### 🔍 Topic Explorer")
+        st.markdown("### 🔍 Search for a skill/concept")
         ic1, ic2, ic3 = st.columns([3, 1, 1])
         with ic1:
             manual_skill = st.text_input("Skill/Concept", placeholder="e.g. Docker Containers", label_visibility="collapsed")
@@ -707,7 +731,7 @@ def render_learn_page():
 
         # Chat
         st.markdown("---")
-        st.markdown("### 💬 Neural Tutor")
+        st.markdown("### 💬 Your Tutor")
         
         # Chat History
         if st.session_state.chat_messages:
@@ -769,7 +793,7 @@ def render_about_page():
         </div>
         """, unsafe_allow_html=True)
         
-    st.info("🏆 Built for GenAI Hackathon 2026 • AWS Bedrock Track")
+    st.info("🏆 Built for Agentic AI Hackathon 2026 • AWS Bedrock Track")
 
 # =============================================================================
 # ROUTER

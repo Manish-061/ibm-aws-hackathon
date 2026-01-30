@@ -1,9 +1,19 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
 from app.aws.kb_client import KnowledgeBaseClient
 from app.aws.bedrock_client import BedrockClient
 from app.agents.orchestrator import OrchestratorAgent
+from app.agents.feedback_agent import FeedbackAgent
 
 router = APIRouter()
+
+
+# Request model for feedback
+class FeedbackRequest(BaseModel):
+    original_path: Dict[str, Any]
+    feedback: Dict[str, Any]
+    original_goal: str
 
 
 @router.get("/health")
@@ -24,6 +34,34 @@ def test_kb(query: str):
         "query": query,
         "results": results
     }
+
+@router.post("/refine")
+def refine_learning_path(request: FeedbackRequest):
+    """
+    Refine a learning path based on user feedback.
+    
+    Feedback categories:
+    - skill_feedback: Dict mapping skill names to ratings:
+        - "already_known": User already knows this skill
+        - "too_advanced": Skill is too difficult right now
+        - "not_relevant": Skill is not relevant to their goal
+        - "want_more": User wants to explore this topic more deeply
+    - general_feedback: Free-text feedback from user
+    
+    Returns:
+    - refined_path: The updated learning path
+    - changes_made: List of changes with explanations
+    - feedback_processed: Summary of feedback categories processed
+    """
+    feedback_agent = FeedbackAgent()
+    
+    result = feedback_agent.run(
+        original_path=request.original_path,
+        feedback=request.feedback,
+        original_goal=request.original_goal
+    )
+    
+    return result
 
 @router.post("/learn")
 def learn_skill(skill: str, user_level: str = "Beginner", context: str = ""):
@@ -103,4 +141,3 @@ def chat_with_tutor(message: str, skill_context: str = "", conversation_history:
             "status": "error",
             "message": str(e)
         }
-

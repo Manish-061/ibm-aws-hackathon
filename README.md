@@ -115,6 +115,14 @@
 - Provides confidence scores (High/Medium/Low)
 - Enables trust through transparency
 
+### 🔄 Feedback Agent
+**Role:** Continuous path refinement  
+**Responsibilities:**
+- Processes user feedback on skills (already known, too advanced, not relevant, want more)
+- Retrieves additional content from KB for topics user wants to explore
+- Generates refined learning paths with clear change explanations
+- Implements the feedback loop for adaptive learning
+
 ---
 
 ## 📁 Project Structure
@@ -130,6 +138,7 @@ auralearn/
 │   │   │   ├── orchestrator.py     # Central coordination agent
 │   │   │   ├── education_agent.py  # RAG-based learning path generator
 │   │   │   ├── cross_domain_agent.py # KB-grounded skill transfer
+│   │   │   ├── feedback_agent.py   # User feedback processing & path refinement
 │   │   │   └── explainability.py   # Reasoning transparency
 │   │   ├── api/
 │   │   │   └── routes.py           # API endpoints
@@ -167,6 +176,7 @@ auralearn/
 |----------|--------|-------------|
 | `/health` | GET | System health check |
 | `/orchestrate` | POST | Main orchestration endpoint - generates complete learning path |
+| `/refine` | POST | Refine learning path based on user feedback |
 | `/learn` | POST | Generate educational content for a specific skill |
 | `/chat` | POST | Interactive chat with AI tutor |
 | `/test-kb` | GET | Test Knowledge Base retrieval |
@@ -263,6 +273,49 @@ Frontend will start at `http://localhost:8501`
    - Cross-domain applications (Health, Finance, Agriculture)
    - AI reasoning explanation
 6. **Learn Interactively** - Click on any skill to dive deeper
+7. **Provide Feedback** - Rate each skill using the feedback options
+8. **Refine Path** - Submit feedback to get an AI-refined learning path
+
+---
+
+## 🔄 Feedback Loop Feature
+
+The feedback loop allows you to refine your learning path based on your personal knowledge and preferences.
+
+### How It Works
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Initial Path   │───▶│  User Feedback   │───▶│  Refined Path   │
+│  Generated      │    │  Collection      │    │  Displayed      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │  Feedback Agent  │
+                    │  • Process Ratings│
+                    │  • Query KB      │
+                    │  • Refine Path   │
+                    └──────────────────┘
+```
+
+### Feedback Options
+
+| Rating | Icon | Action |
+|--------|------|--------|
+| **Keep** | ✅ | Skill remains in the path (no change) |
+| **Already Know** | 📚 | Skill is removed from path completely |
+| **Too Advanced** | ⚡ | Skill moves to later stage or prerequisites added |
+| **Not Relevant** | ❌ | Skill is removed from path completely |
+| **Want More** | 🔍 | Related advanced skills are added from KB |
+
+### Behind the Scenes
+
+1. **Categorization** - User ratings are grouped by action type
+2. **KB Retrieval** - For "Want More" topics, additional content is fetched from Knowledge Base
+3. **LLM Refinement** - The AI generates a new path following refinement rules
+4. **Transparency** - All changes are explained in plain language
+5. **Apply Changes** - User can review and apply the refined path
 
 ---
 
@@ -299,10 +352,11 @@ Frontend will start at `http://localhost:8501`
 
 | Feature | Implementation |
 |---------|---------------|
-| **Agentic Architecture** | 4 specialized agents with clear boundaries |
+| **Agentic Architecture** | 5 specialized agents with clear boundaries |
 | **Grounded Knowledge** | RAG with AWS Bedrock Knowledge Bases |
 | **Cross-Domain Impact** | KB-grounded skill transfer mapping |
 | **Full Explainability** | Reasoning, assumptions, and confidence |
+| **Feedback Loop** | User-driven path refinement with KB expansion |
 | **AWS Native** | 100% AWS services (Bedrock, OpenSearch) |
 
 ---
@@ -319,17 +373,11 @@ Frontend will start at `http://localhost:8501`
 ## 🔮 Future Roadmap
 
 - [ ] Add progress tracking and completion status
-- [ ] Implement user feedback loop for path refinement
+- [x] Implement user feedback loop for path refinement ✅
 - [ ] Expand Knowledge Base with more domains
 - [ ] Add resource recommendations (courses, books, projects)
 - [ ] Implement learning analytics dashboard
 - [ ] Enable multi-language support
-
----
-
-## 👥 Team
-
-**GenAI Hackathon 2026 - AWS Bedrock Category**
 
 ---
 

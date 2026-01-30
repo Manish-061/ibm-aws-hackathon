@@ -212,6 +212,12 @@ if "learning_content" not in st.session_state:
     st.session_state.learning_content = None
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
+if "skill_feedback" not in st.session_state:
+    st.session_state.skill_feedback = {}
+if "refined_path" not in st.session_state:
+    st.session_state.refined_path = None
+if "feedback_changes" not in st.session_state:
+    st.session_state.feedback_changes = []
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -272,6 +278,25 @@ def call_chat_api(message: str, skill_context: str = ""):
             f"{BACKEND_URL}/chat",
             params={"message": message, "skill_context": skill_context},
             timeout=60
+        )
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def call_refine_api(original_path: dict, feedback: dict, original_goal: str):
+    """Call the /refine endpoint to get a refined learning path based on feedback."""
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/refine",
+            json={
+                "original_path": original_path,
+                "feedback": feedback,
+                "original_goal": original_goal
+            },
+            timeout=90
         )
         if response.status_code == 200:
             return {"success": True, "data": response.json()}
@@ -666,6 +691,174 @@ def render_results_section(data: dict):
                 st.markdown("**Key Assumptions:**")
                 for assumption in assumptions:
                     st.markdown(f"- {assumption}")
+    
+    # =========================================================================
+    # FEEDBACK SECTION - User Feedback Loop
+    # =========================================================================
+    st.markdown("---")
+    st.markdown("### 🔄 Refine Your Learning Path")
+    st.markdown("""
+    <div style="background: rgba(88, 166, 255, 0.1); border: 1px solid #30363D; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+        <span style="color: #58A6FF;">💡</span>
+        <span style="color: #8B949E;">Help the AI improve your path! Rate each skill below to get a personalized refinement.</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Collect all skills from the path
+    all_skills = []
+    all_skills.extend([(s, "Foundation") for s in roadmap.get("foundation", [])])
+    all_skills.extend([(s, "Growth") for s in roadmap.get("intermediate", [])])
+    all_skills.extend([(s, "Mastery") for s in roadmap.get("advanced", [])])
+    
+    if all_skills:
+        with st.expander("📝 **Rate Skills & Provide Feedback**", expanded=True):
+            st.markdown("##### Rate each skill:")
+            st.markdown("""
+            <div style="font-size: 0.85rem; color: #8B949E; margin-bottom: 1rem;">
+                <span style="color: #3FB950;">✅ Keep</span> • 
+                <span style="color: #58A6FF;">📚 Already Know</span> • 
+                <span style="color: #F0883E;">⚡ Too Advanced</span> • 
+                <span style="color: #F85149;">❌ Not Relevant</span> • 
+                <span style="color: #A371F7;">🔍 Want More</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Create columns for skill ratings
+            feedback_options = ["✅ Keep", "📚 Already Know", "⚡ Too Advanced", "❌ Not Relevant", "🔍 Want More"]
+            feedback_map = {
+                "✅ Keep": "keep",
+                "📚 Already Know": "already_known",
+                "⚡ Too Advanced": "too_advanced",
+                "❌ Not Relevant": "not_relevant",
+                "🔍 Want More": "want_more"
+            }
+            
+            # Group by stage
+            for stage_name, stage_color in [("Foundation", "#58A6FF"), ("Growth", "#A371F7"), ("Mastery", "#3FB950")]:
+                stage_skills = [s for s, stg in all_skills if stg == stage_name]
+                if stage_skills:
+                    st.markdown(f'<div style="color: {stage_color}; font-weight: 600; margin-top: 0.5rem;">🔹 {stage_name}</div>', unsafe_allow_html=True)
+                    
+                    for skill in stage_skills:
+                        col1, col2 = st.columns([2, 3])
+                        with col1:
+                            st.markdown(f"<div style='padding: 0.5rem 0; color: #C9D1D9;'>{skill}</div>", unsafe_allow_html=True)
+                        with col2:
+                            current_rating = st.session_state.skill_feedback.get(skill, "✅ Keep")
+                            rating = st.selectbox(
+                                f"Rate {skill}",
+                                options=feedback_options,
+                                index=feedback_options.index(current_rating) if current_rating in feedback_options else 0,
+                                key=f"feedback_{skill}",
+                                label_visibility="collapsed"
+                            )
+                            st.session_state.skill_feedback[skill] = rating
+            
+            st.markdown("---")
+            st.markdown("##### General Feedback (Optional):")
+            general_feedback = st.text_area(
+                "Share any additional thoughts or preferences",
+                placeholder="e.g., I prefer practical projects over theory, I'm interested in cloud deployment...",
+                height=100,
+                key="general_feedback_text"
+            )
+            
+            # Refine Button
+            st.markdown("<br>", unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🔄 Refine My Learning Path", use_container_width=True, key="refine_btn"):
+                    # Prepare feedback data
+                    skill_ratings = {}
+                    for skill, rating in st.session_state.skill_feedback.items():
+                        mapped_rating = feedback_map.get(rating, "keep")
+                        if mapped_rating != "keep":  # Only include non-keep ratings
+                            skill_ratings[skill] = mapped_rating
+                    
+                    feedback_data = {
+                        "skill_feedback": skill_ratings,
+                        "general_feedback": general_feedback
+                    }
+                    
+                    original_goal = st.session_state.user_profile.get("goal", "")
+                    
+                    with st.spinner("🔄 AI is refining your path based on feedback..."):
+                        result = call_refine_api(learning_plan, feedback_data, original_goal)
+                    
+                    if result["success"]:
+                        st.session_state.refined_path = result["data"].get("refined_path", {})
+                        st.session_state.feedback_changes = result["data"].get("changes_made", [])
+                        st.success("✅ Learning path refined successfully!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error: {result['error']}")
+    
+    # Display Refined Path if Available
+    if st.session_state.refined_path:
+        st.markdown("---")
+        st.markdown("### ✨ Refined Learning Path")
+        
+        # Show changes made
+        if st.session_state.feedback_changes:
+            st.markdown("""
+            <div style="background: rgba(63, 185, 80, 0.1); border: 1px solid #3FB950; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="color: #3FB950; font-weight: 600; margin-bottom: 0.5rem;">📋 Changes Made:</div>
+            """, unsafe_allow_html=True)
+            for change in st.session_state.feedback_changes:
+                st.markdown(f"<div style='color: #8B949E; padding-left: 1rem;'>• {change}</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Display refined path
+        refined = st.session_state.refined_path
+        r1, r2, r3 = st.columns(3)
+        
+        with r1:
+            refined_foundation = refined.get("foundation", [])
+            skills_list = "".join([f"<li>{s}</li>" for s in refined_foundation]) if refined_foundation else "<li>No changes</li>"
+            st.markdown(f"""
+            <div class="custom-card stage-foundation">
+                <div class="card-title">🏗️ Foundation (Refined)</div>
+                <div class="card-body">
+                    <ul style="padding-left: 1.2rem; margin: 0;">{skills_list}</ul>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with r2:
+            refined_intermediate = refined.get("intermediate", [])
+            skills_list = "".join([f"<li>{s}</li>" for s in refined_intermediate]) if refined_intermediate else "<li>No changes</li>"
+            st.markdown(f"""
+            <div class="custom-card stage-growth">
+                <div class="card-title">🚀 Growth (Refined)</div>
+                <div class="card-body">
+                    <ul style="padding-left: 1.2rem; margin: 0;">{skills_list}</ul>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with r3:
+            refined_advanced = refined.get("advanced", [])
+            skills_list = "".join([f"<li>{s}</li>" for s in refined_advanced]) if refined_advanced else "<li>No changes</li>"
+            st.markdown(f"""
+            <div class="custom-card stage-mastery">
+                <div class="card-title">🏆 Mastery (Refined)</div>
+                <div class="card-body">
+                    <ul style="padding-left: 1.2rem; margin: 0;">{skills_list}</ul>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Button to apply refined path
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("✅ Apply Refined Path", use_container_width=True, key="apply_refined"):
+                # Update the main response with refined path
+                st.session_state.api_response["learning_plan"]["learning_path"] = st.session_state.refined_path
+                st.session_state.refined_path = None
+                st.session_state.feedback_changes = []
+                st.session_state.skill_feedback = {}
+                st.success("✅ Refined path applied!")
+                st.rerun()
     
     # Raw Data (Debug)
     with st.expander("📋 **View Raw API Response**", expanded=False):

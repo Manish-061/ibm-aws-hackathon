@@ -343,7 +343,7 @@ def format_lesson_content(text: str) -> str:
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=60)
     st.markdown("## AURA-Learn")
-    st.caption("AI Career Architect v2.2")
+    st.caption("AI Career Architect")
     st.markdown("---")
     
     st.markdown("### Menu")
@@ -399,7 +399,7 @@ def render_home_page():
     
     col1, col2, col3 = st.columns([1, 0.8, 1])
     with col2:
-        if st.button("⚡ Build My Roadmap", use_container_width=True, key="home_cta"):
+        if st.button("⚡ Start Learning..", use_container_width=True, key="home_cta"):
             navigate_to("planner")
     
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -581,7 +581,7 @@ def render_results_section(data: dict):
     all_skills.extend([(s, "Mastery") for s in roadmap.get("advanced", [])])
     
     with st.expander("📝 **Open Skill Calibration Panel**", expanded=True):
-        feedback_options = ["✅ Keep", "📚 Already Know", "⚡ Too Advanced", "❌ Not Relevant", "🔍 Want More"]
+        feedback_options = ["✅ Keep", "📚 Already Know", "⚡ Too Advanced"]
         
         # Grid layout for cleaner feedback
         for stage_name, color in [("Foundation", "#4CC9F0"), ("Growth", "#4361EE"), ("Mastery", "#7209B7")]:
@@ -731,7 +731,7 @@ def render_learn_page():
 
         # Chat
         st.markdown("---")
-        st.markdown("### 💬 Your Tutor")
+        st.markdown("### 💬 Tutor")
         
         # Chat History
         if st.session_state.chat_messages:
@@ -745,7 +745,7 @@ def render_learn_page():
         with st.form(key="chat_form", clear_on_submit=True):
             c_in, c_btn = st.columns([5, 1])
             with c_in:
-                user_q = st.text_input("Ask a question...", placeholder="Explain this concept simply...", label_visibility="collapsed")
+                user_q = st.text_input("Ask a question...", placeholder="Ask Follow up questions...", label_visibility="collapsed")
             with c_btn:
                 send = st.form_submit_button("Send")
             

@@ -1,282 +1,345 @@
-PHASE 0 — GOVERNANCE & CONSTRAINT LOCK-IN
+<p align="center">
+  <img src="https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS Bedrock"/>
+  <img src="https://img.shields.io/badge/Amazon-Nova_Premier-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="Nova Premier"/>
+  <img src="https://img.shields.io/badge/Python-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/Frontend-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit"/>
+</p>
+
+<h1 align="center">🎓 AURA-Learn</h1>
+<h3 align="center">Agentic Universal Reasoning Architecture for Personalized Learning</h3>
+
+<p align="center">
+  <strong>An AI-powered career architect that uses multi-agent collaboration to build personalized, hallucination-free learning roadmaps grounded in verified knowledge.</strong>
+</p>
+
+<p align="center">
+  <em>Built for GenAI Hackathon 2026 • AWS Bedrock Category</em>
+</p>
+
+---
+
+## 🌟 Overview
+
+**AURA-Learn** is an advanced agentic AI system that revolutionizes personalized learning by moving beyond traditional chatbots. Instead of simply answering questions, AURA-Learn uses a **multi-agent architecture** where specialized AI components collaborate to:
+
+- **Interpret user goals** with context-aware understanding
+- **Retrieve grounded knowledge** from curated educational content
+- **Generate structured learning paths** with proper skill progression
+- **Map cross-domain applications** (Health, Finance, Agriculture)
+- **Provide transparent explanations** for every recommendation
+
+### 🚫 What Makes This Different from a Chatbot?
+
+| Traditional Chatbot | AURA-Learn |
+|---------------------|------------|
+| Single-turn responses | Multi-agent orchestration |
+| May hallucinate content | RAG-grounded knowledge only |
+| No reasoning transparency | Full explainability layer |
+| Static recommendations | Adaptive, goal-aware planning |
+| Domain-specific | Cross-domain skill transfer |
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         AURA-Learn System                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────┐    ┌────────────────────────────────────────┐  │
+│  │    Frontend     │    │           Backend (FastAPI)            │  │
+│  │   (Streamlit)   │───▶│                                        │ │
+│  │                 │    │  ┌──────────────────────────────────┐  │ │
+│  │  • Home Page    │    │  │      Orchestrator Agent          │  │ │
+│  │  • Planner      │    │  │  (Central planning & coordination)│  │ │
+│  │  • Learn        │    │  └─────────────┬────────────────────┘  │ │
+│  │  • About        │    │                │                       │ │
+│  └─────────────────┘    │  ┌─────────────┴────────────────────┐  │ │
+│                         │  │                                   │  │ │
+│                         │  │  ┌───────────┐ ┌───────────────┐  │  │ │
+│                         │  │  │ Education │ │  Cross-Domain │  │  │ │
+│                         │  │  │   Agent   │ │     Agent     │  │  │ │
+│                         │  │  │  (RAG)    │ │  (KB Grounded)│  │  │ │
+│                         │  │  └───────────┘ └───────────────┘  │  │ │
+│                         │  │                                   │  │ │
+│                         │  │  ┌──────────────────────────────┐ │  │ │
+│                         │  │  │   Explainability Agent       │ │  │ │
+│                         │  │  │  (Reasoning transparency)    │ │  │ │
+│                         │  │  └──────────────────────────────┘ │  │ │
+│                         │  │                                   │  │ │
+│                         │  └───────────────────────────────────┘  │ │
+│                         │                                        │ │
+│                         │  ┌──────────────────────────────────┐  │ │
+│                         │  │        AWS Integration           │  │ │
+│                         │  │  • Bedrock Client (Nova Premier) │  │ │
+│                         │  │  • Knowledge Base Client (RAG)   │  │ │
+│                         │  └──────────────────────────────────┘  │ │
+│                         └────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🤖 Agent Roles & Responsibilities
+
+### 🎯 Orchestrator Agent
+**Role:** Central planning and coordination  
+**Responsibilities:**
+- Interprets user goals with context extraction
+- Coordinates the execution flow between agents
+- Manages the planning lifecycle (plan → act → observe)
+- Aggregates outputs into final response
+
+### 📚 Education Agent
+**Role:** RAG-powered curriculum design  
+**Responsibilities:**
+- Retrieves content from AWS Bedrock Knowledge Base
+- Validates content relevance against user goals
+- Extracts specific technical skills from documents
+- Structures learning paths (Foundation → Intermediate → Advanced)
+
+### 🌐 Cross-Domain Agent
+**Role:** Skill transfer mapping  
+**Responsibilities:**
+- Retrieves domain-specific content from Knowledge Base
+- Maps educational skills to Health, Finance, and Agriculture
+- Generates grounded, factual cross-domain applications
+- Uses KB content as primary source (no hallucination)
+
+### 🔍 Explainability Agent
+**Role:** Decision transparency  
+**Responsibilities:**
+- Documents reasoning for every recommendation
+- Identifies assumptions made by the system
+- Provides confidence scores (High/Medium/Low)
+- Enables trust through transparency
+
+---
+
+## 📁 Project Structure
+
+```
+auralearn/
+├── README.md
+├── auralearn-backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                 # FastAPI application entry point
+│   │   ├── agents/
+│   │   │   ├── orchestrator.py     # Central coordination agent
+│   │   │   ├── education_agent.py  # RAG-based learning path generator
+│   │   │   ├── cross_domain_agent.py # KB-grounded skill transfer
+│   │   │   └── explainability.py   # Reasoning transparency
+│   │   ├── api/
+│   │   │   └── routes.py           # API endpoints
+│   │   ├── aws/
+│   │   │   ├── bedrock_client.py   # Amazon Bedrock LLM integration
+│   │   │   └── kb_client.py        # Knowledge Base retrieval
+│   │   ├── core/
+│   │   │   └── config.py           # Environment configuration
+│   │   ├── schemas/                # Request/Response models
+│   │   ├── services/               # Business logic services
+│   │   └── utils/                  # Helper utilities
+│   ├── requirements.txt
+│   └── .env                        # AWS credentials (not committed)
+└── frontend/
+    └── app.py                      # Streamlit application
+```
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **LLM** | Amazon Nova Premier | Reasoning, generation, orchestration |
+| **Knowledge Base** | AWS Bedrock KB + OpenSearch | Vector storage, semantic retrieval |
+| **Backend** | Python + FastAPI | REST API, agent coordination |
+| **Frontend** | Streamlit | Interactive web interface |
+| **Cloud** | AWS | Bedrock, IAM, OpenSearch Serverless |
+
+---
+
+## 📡 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | System health check |
+| `/orchestrate` | POST | Main orchestration endpoint - generates complete learning path |
+| `/learn` | POST | Generate educational content for a specific skill |
+| `/chat` | POST | Interactive chat with AI tutor |
+| `/test-kb` | GET | Test Knowledge Base retrieval |
+
+---
+
+## 🗄️ Knowledge Base Contents
+
+The system uses a curated knowledge base with the following documents:
+
+| File | Purpose |
+|------|---------|
+| `education_to_health.txt` | Skill transfer mappings for Healthcare domain |
+| `education_to_finance.txt` | Skill transfer mappings for Finance domain |
+| `education_to_agriculture.txt` | Skill transfer mappings for Agriculture domain |
+| `backend_skills_outcomes.txt` | Technical skills and expected outcomes |
+| `cross_domain_constraints.txt` | Rules and constraints for domain mapping |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.9+
+- AWS Account with Bedrock access
+- Bedrock Knowledge Base configured
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Manish-061/ibm-aws-hackathon.git
+cd ibm-aws-hackathon
+```
+
+### 2. Backend Setup
+
+```bash
+cd auralearn-backend
+
+# Create virtual environment
+python -m venv venv
 
-(Often skipped, often fatal if ignored)
+# Activate virtual environment
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
 
-Objective
+### 3. Configure Environment
 
-Establish non-negotiable system boundaries so that all later design and implementation stays judge-safe, AWS-compliant, and execution-realistic.
+Create a `.env` file in `auralearn-backend/`:
+
+```env
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=us.amazon.nova-premier-v1:0
+BEDROCK_KB_ID=your-knowledge-base-id
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+```
 
-Required Implementations & Activities
+### 4. Run the Backend
 
-Lock cloud provider scope to AWS only
+```bash
+python app/main.py
+```
 
-Lock allowed regions and services
+Backend will start at `http://localhost:8000`
 
-Lock model families and explicitly exclude forbidden options
+### 5. Run the Frontend
 
-Define IAM usage policy (single service role)
+```bash
+cd ../frontend
+streamlit run app.py
+```
 
-Define what will not be built in this hackathon
+Frontend will start at `http://localhost:8501`
 
-What Must Be Designed / Configured / Validated
+---
 
-Architectural guardrails document
+## 🎮 Usage Flow
 
-Service responsibility boundaries
+1. **Open the Application** - Navigate to `http://localhost:8501`
+2. **Enter Your Profile** - Provide name, qualification, and experience level
+3. **Define Your Goal** - Enter what skill or role you want to master
+4. **Generate Learning Path** - Click "Generate My Learning Path"
+5. **Review Results**:
+   - Skills identified from knowledge base
+   - Structured learning stages (Foundation → Growth → Mastery)
+   - Cross-domain applications (Health, Finance, Agriculture)
+   - AI reasoning explanation
+6. **Learn Interactively** - Click on any skill to dive deeper
 
-Explicit exclusions (e.g., no third-party LLMs, no external vector DBs)
+---
 
-Shared understanding across team roles
+## 🔒 Trust & Safety
 
-Expected Outcomes / Deliverables
+### Grounding & Hallucination Prevention
+- All recommendations come from verified Knowledge Base content
+- Education Agent validates content relevance before extraction
+- Cross-Domain Agent uses KB as primary source with fallback messages
+- Clear indication when knowledge is insufficient
 
-One-page Architecture & Compliance Charter
+### Explainability
+- Every recommendation includes reasoning
+- Assumptions are explicitly listed
+- Confidence scores provided
+- Full decision trace available in raw API response
 
-A “cannot be changed” checklist for judges
+---
 
-Zero ambiguity about platform choices
+## 📊 Demo Screenshots
 
-PHASE 1 — SYSTEM FOUNDATION (YOU ALREADY STARTED THIS)
-Objective
+### Learning Path Generation
+*User enters their goal and receives a personalized, staged learning roadmap*
 
-Create a credible, minimal, end-to-end system skeleton that demonstrates agentic reasoning, grounded knowledge access, and explainability—without overbuilding.
+### Cross-Domain Applications
+*Skills are mapped to Health, Finance, and Agriculture using KB-grounded content*
 
-Required Implementations & Activities
+### AI Reasoning
+*Full transparency into why recommendations were made*
 
-Define core system components and their responsibilities
+---
 
-Finalize agent roles and decision boundaries
+## 🎯 Key Differentiators
 
-Establish data flow from user input to final output
+| Feature | Implementation |
+|---------|---------------|
+| **Agentic Architecture** | 4 specialized agents with clear boundaries |
+| **Grounded Knowledge** | RAG with AWS Bedrock Knowledge Bases |
+| **Cross-Domain Impact** | KB-grounded skill transfer mapping |
+| **Full Explainability** | Reasoning, assumptions, and confidence |
+| **AWS Native** | 100% AWS services (Bedrock, OpenSearch) |
 
-Define how RAG, memory, and reasoning interact conceptually
+---
 
-What Must Be Designed / Configured / Integrated
+## ⚠️ Known Limitations
 
-Agent interaction model (orchestrator + specialist agents)
+1. **Knowledge Scope** - Limited to curated content in Knowledge Base
+2. **Latency** - Multi-agent orchestration takes 15-30 seconds
+3. **Cold Start** - First request may be slower due to model initialization
+4. **Domain Coverage** - Cross-domain limited to Health, Finance, Agriculture
 
-Knowledge vs memory separation
+---
 
-Human-in-the-loop hook (even if minimal)
+## 🔮 Future Roadmap
 
-High-level request/response lifecycle
+- [ ] Add progress tracking and completion status
+- [ ] Implement user feedback loop for path refinement
+- [ ] Expand Knowledge Base with more domains
+- [ ] Add resource recommendations (courses, books, projects)
+- [ ] Implement learning analytics dashboard
+- [ ] Enable multi-language support
 
-Non-functional priorities (determinism > creativity)
+---
 
-Expected Outcomes / Deliverables
+## 👥 Team
 
-System flow diagram
+**GenAI Hackathon 2026 - AWS Bedrock Category**
 
-Agent responsibility matrix
+---
 
-Folder and module structure (conceptual)
+## 📄 License
 
-README-level explanation that a judge can understand in 60 seconds
+This project is built for the Agentic AI Hackathon 2026.
 
-PHASE 2 — KNOWLEDGE & DATA FOUNDATION (RAG CORE)
-Objective
+---
 
-Ensure that all learning recommendations are grounded, auditable, and non-hallucinatory.
-
-Required Implementations & Activities
-
-Curate trusted educational and job-role content
-
-Define ingestion and update policy (static vs evolving knowledge)
-
-Define retrieval quality criteria
-
-Decide what content is authoritative vs supportive
-
-What Must Be Designed / Configured / Integrated
-
-Knowledge schema (skills, roles, prerequisites, outcomes)
-
-Embedding strategy (single model, consistent dimensionality)
-
-Retrieval relevance rules
-
-Citation and traceability expectations
-
-Expected Outcomes / Deliverables
-
-A single, well-scoped knowledge base
-
-Clear explanation of “why this content can be trusted”
-
-Demonstrable grounding for every education recommendation
-
-PHASE 3 — AGENTIC INTELLIGENCE & DECISION FLOW
-Objective
-
-Move from “AI that answers” to AI that plans, evaluates, and adapts.
-
-Required Implementations & Activities
-
-Define how goals are decomposed
-
-Define how agents communicate and return structured outputs
-
-Define re-planning triggers (progress, failure, ambiguity)
-
-Establish confidence scoring or decision certainty
-
-What Must Be Designed / Configured / Integrated
-
-Planning lifecycle (plan → act → observe → replan)
-
-Agent boundaries (who reasons, who retrieves, who explains)
-
-Failure handling and fallback logic
-
-Guardrails against runaway autonomy
-
-Expected Outcomes / Deliverables
-
-Clear demonstration of agentic behavior
-
-Evidence that the system adapts, not just responds
-
-Judge-ready explanation of “why this is not a chatbot”
-
-PHASE 4 — EXPLAINABILITY & TRUST LAYER
-Objective
-
-Make every system decision transparent, defensible, and human-understandable.
-
-Required Implementations & Activities
-
-Capture decision rationale at each step
-
-Translate internal decisions into plain-language explanations
-
-Highlight trade-offs and assumptions
-
-Enable human review or override
-
-What Must Be Designed / Configured / Integrated
-
-Explanation templates and structure
-
-Input → decision → outcome trace
-
-Separation between reasoning and explanation generation
-
-Ethical framing (what the system refuses to decide)
-
-Expected Outcomes / Deliverables
-
-Explainability output visible to users and judges
-
-Strong answer to: “Why should we trust this AI?”
-
-Major differentiation point vs typical hackathon projects
-
-PHASE 5 — CROSS-DOMAIN IMPACT EXTENSION
-Objective
-
-Demonstrate scalability of intelligence, not just scalability of infrastructure.
-
-Required Implementations & Activities
-
-Map educational outcomes to other life domains
-
-Define transformation logic (education → health/finance/agriculture)
-
-Keep domains decoupled but interoperable
-
-What Must Be Designed / Configured / Integrated
-
-Domain abstraction layer
-
-Output transformation rules
-
-Clear causal links (education enables X)
-
-Avoid domain-specific hallucination
-
-Expected Outcomes / Deliverables
-
-Multi-domain insights from a single agentic core
-
-Proof that architecture generalizes beyond education
-
-Strong social-impact narrative
-
-PHASE 6 — USER EXPERIENCE & INTERACTION FLOW
-Objective
-
-Ensure the system feels intentional, guided, and human-centric, not technical.
-
-Required Implementations & Activities
-
-Define user journey from goal to outcome
-
-Decide what users control vs what AI controls
-
-Define feedback and progress checkpoints
-
-What Must Be Designed / Configured / Integrated
-
-Input framing (goals, constraints, timeline)
-
-Progress visualization concepts
-
-Feedback capture loop
-
-Failure and confusion handling
-
-Expected Outcomes / Deliverables
-
-Clear, linear user journey story
-
-UI that reinforces intelligence, not complexity
-
-Judge-friendly demo flow
-
-PHASE 7 — VALIDATION, LIMITS & JUDGE DEFENSE
-Objective
-
-Proactively answer judge skepticism before it is asked.
-
-Required Implementations & Activities
-
-Validate system behavior against original objectives
-
-Identify limitations honestly
-
-Stress-test assumptions (cost, latency, accuracy)
-
-Prepare concise explanations
-
-What Must Be Designed / Configured / Integrated
-
-Validation criteria per phase
-
-Known limitations and future work
-
-Clear separation between “implemented” and “designed”
-
-Expected Outcomes / Deliverables
-
-Confident demo with no overclaims
-
-Strong answers to “what breaks?” and “what’s next?”
-
-Professional, production-minded impression
-
-Final Reality Check
-
-This phased plan is ambitious but disciplined.
-If executed cleanly, it positions your project as:
-
-Architected, not improvised
-
-Grounded, not speculative
-
-Agentic, not chatbot-wrapped
-
-Scalable, not demo-fragile
-
-I have locked this full phase roadmap into context.
-Give your next instruction when ready.
+<p align="center">
+  <strong>🏆 Built with ❤️ for Agentic AI Hackathon 2026</strong><br>
+  <em>Demonstrating the power of Agentic AI with AWS Bedrock</em>
+</p>
